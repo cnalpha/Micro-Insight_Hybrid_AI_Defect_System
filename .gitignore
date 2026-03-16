@@ -1,0 +1,14 @@
+# === Python 後端忽略清單 ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.pt
+api_temp/
+api_results/
+
+# === C# 前端忽略清單 ===
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/
