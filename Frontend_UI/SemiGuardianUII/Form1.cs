@@ -148,7 +148,7 @@ namespace SemiGuardianUII
             this.Controls.Add(rightPanel);
 
             Label lblListTitle = new Label();
-            lblListTitle.Text = "📜 即時檢測戰情日誌 (Live Log)";
+            lblListTitle.Text = "📜 即時檢測日誌 (Live Log)";
             lblListTitle.Font = new Font("微軟正黑體", 14, FontStyle.Bold);
             lblListTitle.ForeColor = Color.WhiteSmoke;
             lblListTitle.Dock = DockStyle.Top;
