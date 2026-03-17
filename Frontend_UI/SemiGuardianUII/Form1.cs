@@ -28,6 +28,10 @@ namespace SemiGuardianUII
         private Button btnNext;
         private Button btnPauseResume; // 暫停/繼續按鈕
 
+        // 🌟 [新增] 開啟 CSV 按鈕與路徑記錄
+        private Button btnOpenCsv;
+        private string latestCsvPath = "";
+
         // =========================================================
         // 歷史記憶庫結構與暫停狀態開關
         // =========================================================
@@ -123,20 +127,35 @@ namespace SemiGuardianUII
             btnPauseResume.Click += BtnPauseResume_Click;
             headerPanel.Controls.Add(btnPauseResume);
 
-            // 機台指令標籤 
+            // 🌟 [新增] 開啟 CSV 報表按鈕
+            btnOpenCsv = new Button();
+            btnOpenCsv.Text = "📊 開啟報表";
+            btnOpenCsv.Size = new Size(130, 50);
+            btnOpenCsv.Location = new Point(570, 40); // 放在暫停按鈕的右邊
+            btnOpenCsv.Font = new Font("微軟正黑體", 12, FontStyle.Bold);
+            btnOpenCsv.FlatStyle = FlatStyle.Flat;
+            btnOpenCsv.FlatAppearance.BorderSize = 0;
+            btnOpenCsv.BackColor = Color.Purple; // 用紫色凸顯報表功能
+            btnOpenCsv.ForeColor = Color.White;
+            btnOpenCsv.Cursor = Cursors.Hand;
+            btnOpenCsv.Enabled = false; // 初始狀態設為不可按，等跑完才解鎖
+            btnOpenCsv.Click += BtnOpenCsv_Click;
+            headerPanel.Controls.Add(btnOpenCsv);
+
+            // 機台指令標籤 (因為加了報表按鈕，X 座標往右推避免重疊)
             lblAction.Font = new Font("微軟正黑體", 26, FontStyle.Bold);
             lblAction.ForeColor = Color.WhiteSmoke;
             lblAction.BackColor = Color.Transparent;
             lblAction.AutoSize = true;
-            lblAction.Location = new Point(580, 20);
+            lblAction.Location = new Point(720, 20); // 往右推
             headerPanel.Controls.Add(lblAction);
 
-            // 系統說明標籤
+            // 系統說明標籤 (X 座標同步往右推)
             lblMessage.Font = new Font("微軟正黑體", 12, FontStyle.Regular);
             lblMessage.ForeColor = Color.LightGray;
             lblMessage.BackColor = Color.Transparent;
             lblMessage.AutoSize = true;
-            lblMessage.Location = new Point(585, 75);
+            lblMessage.Location = new Point(725, 75); // 往右推
             headerPanel.Controls.Add(lblMessage);
 
             // 2. 右側面板
@@ -180,6 +199,22 @@ namespace SemiGuardianUII
             headerPanel.SendToBack();
             rightPanel.BringToFront();
             imageContainer.BringToFront();
+        }
+
+        // =========================================================
+        // 🌟 [新增] 開啟 CSV 報表的邏輯
+        // =========================================================
+        private void BtnOpenCsv_Click(object sender, EventArgs e)
+        {
+            if (!string.IsNullOrEmpty(latestCsvPath) && File.Exists(latestCsvPath))
+            {
+                // 呼叫 Windows 系統預設軟體 (如 Excel) 打開該檔案
+                System.Diagnostics.Process.Start(latestCsvPath);
+            }
+            else
+            {
+                MessageBox.Show("找不到 CSV 報表檔案，可能尚未產出或已被刪除！", "系統提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         // =========================================================
@@ -241,6 +276,8 @@ namespace SemiGuardianUII
                     btnInspect.Enabled = false;
                     btnPrev.Enabled = false;
                     btnNext.Enabled = false;
+                    btnOpenCsv.Enabled = false; // 🌟 [新增] 執行中鎖住報表按鈕
+                    latestCsvPath = "";         // 🌟 [新增] 清空舊路徑
 
                     // 啟用暫停按鈕並重置狀態
                     isPaused = false;
@@ -251,7 +288,7 @@ namespace SemiGuardianUII
                     reviewHistory.Clear();
                     currentReviewIndex = -1;
 
-                    // 🌟 [新增] 初始化 CSV 暫存區，寫入標題列
+                    // 🌟 初始化 CSV 暫存區，寫入標題列
                     csvDataLines.Clear();
                     csvDataLines.Add("Wafer_Image,Defect_ID,Class,Measurement,Area (um^2),Center_X (px),Center_Y (px)");
 
@@ -292,10 +329,13 @@ namespace SemiGuardianUII
                         // 使用 UTF8 (加上 BOM)，確保 Excel 打開時中文不會變成亂碼
                         File.WriteAllLines(csvFilePath, csvDataLines, new System.Text.UTF8Encoding(true));
                         lstDefects.Items.Add($"💾 CSV報表已匯出: {csvFileName}");
+
+                        // 🌟 [新增] 記錄路徑，並解鎖開啟按鈕
+                        latestCsvPath = csvFilePath;
+                        btnOpenCsv.Enabled = true;
                     }
 
                     lblMessage.Text = "系統說明: 掃描完畢，機台進入待機。可使用上方導覽按鈕回查紀錄。";
-
                     btnInspect.Enabled = true;
                     btnPauseResume.Enabled = false;
                     UpdateButtonStates();
@@ -361,7 +401,7 @@ namespace SemiGuardianUII
                     else foreach (var defect in defectsArray) lstDefects.Items.Add($"   {defect.ToString()}");
                     lstDefects.Items.Add(new string('-', 40));
 
-                    // 🌟 [新增] 解析給 CSV 用的原始數據，寫入暫存清單
+                    // 🌟 解析給 CSV 用的原始數據，寫入暫存清單
                     if (json["raw_defects"] is JArray rawDefectsArray)
                     {
                         foreach (var d in rawDefectsArray)
@@ -383,7 +423,6 @@ namespace SemiGuardianUII
                         ActionColor = actionColor,
                         Message = $"系統說明: {message}"
                     };
-
                     reviewHistory.Add(record);
                     currentReviewIndex = reviewHistory.Count - 1;
 
@@ -419,7 +458,7 @@ namespace SemiGuardianUII
             }
         }
 
-        // 🌟 [修改重點] 加入找不到圖時的防呆清空機制
+        // 🌟 加入找不到圖時的防呆清空機制
         private void ShowHistoryRecord(int index)
         {
             if (index < 0 || index >= reviewHistory.Count) return;
