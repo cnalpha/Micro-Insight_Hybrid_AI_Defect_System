@@ -5,6 +5,8 @@ __pycache__/
 *.pt
 api_temp/
 api_results/
+results/
+images/
 
 # === C# 前端忽略清單 ===
 [Bb]in/

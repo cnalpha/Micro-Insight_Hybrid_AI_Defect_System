@@ -15,13 +15,16 @@ namespace SemiGuardianUII
         // 系統連線與路徑設定
         // =========================================================
         private readonly string apiUrl = "http://127.0.0.1:8000/inspect_wafer/";
-        private readonly string tempDir = @"C:\Users\user\CnLearning\AIChatGPT\Module_B_Vision\OpenCV\api_temp";
+
+        // 🚨 [請修改這裡] 將下方的路徑替換成你目前 Backend_AI 裡面的 api_temp 絕對路徑
+        // 例如：@"C:\Users\user\Desktop\Micro-Insight-System\Backend_AI\api_temp"
+        private readonly string tempDir = @"C:\Users\user\CnLearning\Micro-Insight_Hybrid_AI_Defect_System\Backend_AI\api_temp";
 
         // UI 元件
         private ListBox lstDefects;
         private Button btnPrev;
         private Button btnNext;
-        private Button btnPauseResume; // [新增] 暫停/繼續按鈕
+        private Button btnPauseResume; // 暫停/繼續按鈕
 
         // =========================================================
         // 歷史記憶庫結構與暫停狀態開關
@@ -38,7 +41,7 @@ namespace SemiGuardianUII
         private List<WaferRecord> reviewHistory = new List<WaferRecord>();
         private int currentReviewIndex = -1;
 
-        // 🌟 [新增] 控制系統是否暫停的全域變數
+        // 控制系統是否暫停的全域變數
         private bool isPaused = false;
 
         public Form1()
@@ -50,7 +53,7 @@ namespace SemiGuardianUII
         private void SetupModernUI()
         {
             this.Text = "Micro-Insight: Hybrid AI Defect Profiling System";
-            this.Size = new Size(1350, 800); // 稍微加寬一點點放按鈕
+            this.Size = new Size(1350, 800);
             this.BackColor = Color.FromArgb(30, 30, 30);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.MinimumSize = new Size(1100, 600);
@@ -103,9 +106,7 @@ namespace SemiGuardianUII
             btnNext.Click += BtnNext_Click;
             headerPanel.Controls.Add(btnNext);
 
-            // =========================================================
-            // [新增] 暫停/繼續按鈕
-            // =========================================================
+            // 暫停/繼續按鈕
             btnPauseResume = new Button();
             btnPauseResume.Text = "⏸️ 暫停";
             btnPauseResume.Size = new Size(110, 50);
@@ -113,10 +114,10 @@ namespace SemiGuardianUII
             btnPauseResume.Font = new Font("微軟正黑體", 12, FontStyle.Bold);
             btnPauseResume.FlatStyle = FlatStyle.Flat;
             btnPauseResume.FlatAppearance.BorderSize = 0;
-            btnPauseResume.BackColor = Color.Goldenrod; // 預設橘黃色警告色
+            btnPauseResume.BackColor = Color.Goldenrod;
             btnPauseResume.ForeColor = Color.White;
             btnPauseResume.Cursor = Cursors.Hand;
-            btnPauseResume.Enabled = false; // 沒在檢測時不能按
+            btnPauseResume.Enabled = false;
             btnPauseResume.Click += BtnPauseResume_Click;
             headerPanel.Controls.Add(btnPauseResume);
 
@@ -180,16 +181,16 @@ namespace SemiGuardianUII
         }
 
         // =========================================================
-        // [新增] 暫停/繼續按鈕的切換邏輯
+        // 暫停/繼續按鈕的切換邏輯
         // =========================================================
         private void BtnPauseResume_Click(object sender, EventArgs e)
         {
-            isPaused = !isPaused; // 切換狀態
+            isPaused = !isPaused;
 
             if (isPaused)
             {
                 btnPauseResume.Text = "▶️ 繼續";
-                btnPauseResume.BackColor = Color.SeaGreen; // 變成綠色提示可以繼續
+                btnPauseResume.BackColor = Color.SeaGreen;
                 lstDefects.Items.Add(new string('-', 40));
                 lstDefects.Items.Add("⏸️ [系統插斷] 產線已暫停 (機台 Hold 批)");
                 lstDefects.Items.Add(new string('-', 40));
@@ -197,7 +198,7 @@ namespace SemiGuardianUII
             else
             {
                 btnPauseResume.Text = "⏸️ 暫停";
-                btnPauseResume.BackColor = Color.Goldenrod; // 變回橘黃色
+                btnPauseResume.BackColor = Color.Goldenrod;
                 lstDefects.Items.Add("▶️ [系統插斷] 解除暫停，恢復進片檢測...");
                 lstDefects.Items.Add(new string('-', 40));
             }
@@ -239,7 +240,7 @@ namespace SemiGuardianUII
                     btnPrev.Enabled = false;
                     btnNext.Enabled = false;
 
-                    // 🌟 [新增] 啟用暫停按鈕並重置狀態
+                    // 啟用暫停按鈕並重置狀態
                     isPaused = false;
                     btnPauseResume.Enabled = true;
                     btnPauseResume.Text = "⏸️ 暫停";
@@ -254,12 +255,10 @@ namespace SemiGuardianUII
 
                     for (int i = 0; i < imageFiles.Count; i++)
                     {
-                        // =========================================================
-                        // 🌟 [核心魔法] 非同步暫停檢查 (不會卡死視窗！)
-                        // =========================================================
+                        // 非同步暫停檢查 (不會卡死視窗！)
                         while (isPaused)
                         {
-                            await Task.Delay(200); // 系統每 0.2 秒會醒來檢查一次有沒有被解除暫停
+                            await Task.Delay(200);
                         }
 
                         string filePath = imageFiles[i];
@@ -392,10 +391,10 @@ namespace SemiGuardianUII
             }
         }
 
+        // 🌟 [修改重點] 加入找不到圖時的防呆清空機制
         private void ShowHistoryRecord(int index)
         {
             if (index < 0 || index >= reviewHistory.Count) return;
-
             WaferRecord record = reviewHistory[index];
 
             lblAction.Text = record.ActionText;
@@ -408,6 +407,12 @@ namespace SemiGuardianUII
                 {
                     picWafer.Image = Image.FromStream(fs);
                 }
+            }
+            else
+            {
+                // 如果找不到新圖片，強制清空畫面，破除上一張圖的殘影！
+                picWafer.Image = null;
+                lblMessage.Text += " (⚠️ 警告：無法載入標註影像)";
             }
 
             UpdateButtonStates();

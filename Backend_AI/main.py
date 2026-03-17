@@ -88,7 +88,7 @@ class SemiGuardianInspectorV13_16:
                 if angle_diff < self.config.LINK_GAP_ANGLE and link_diff < self.config.LINK_GAP_ANGLE:
                     if dist < self.config.LINK_GAP_DIST * 3: 
                          cv2.line(canvas, (int(s1['center'][0]), int(s1['center'][1])), 
-                                  (int(s2['center'][0]), int(s2['center'][1])), (255), 2)
+                                 (int(s2['center'][0]), int(s2['center'][1])), (255), 2)
         return canvas
 
     def inspect(self, image_path, output_dir):
@@ -118,7 +118,8 @@ class SemiGuardianInspectorV13_16:
             if name == 'scratches':
                 for idx in idxs:
                     x1, y1, x2, y2 = map(int, boxes[idx])
-                    x1, y1 = max(0, x1), max(0, y1); x2, y2 = min(w, x2), min(h, y2)
+                    x1, y1 = max(0, x1), max(0, y1)
+                    x2, y2 = min(w, x2), min(h, y2)
                     roi_bgr = original_img[y1:y2, x1:x2]
                     if roi_bgr.size == 0: continue
                     roi_gray = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2GRAY)
@@ -153,7 +154,8 @@ class SemiGuardianInspectorV13_16:
             elif name == 'inclusion':
                 for idx in idxs:
                     x1, y1, x2, y2 = map(int, boxes[idx])
-                    x1, y1 = max(0, x1), max(0, y1); x2, y2 = min(w, x2), min(h, y2)
+                    x1, y1 = max(0, x1), max(0, y1)
+                    x2, y2 = min(w, x2), min(h, y2)
                     roi_bgr = original_img[y1:y2, x1:x2]
                     if roi_bgr.size == 0: continue
                     roi_gray = cv2.cvtColor(roi_bgr, cv2.COLOR_BGR2GRAY)
@@ -246,13 +248,11 @@ class FDC_System:
         return math.sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
 
     def is_same_location(self, current_loc):
-        # 如果歷史記錄的數量不夠 (例如要連續3片，歷史至少要有前2片)
         if len(self.history_locations) < self.alarm_streak - 1:
             return False 
 
-        streak_count = 1 # 當前這片晶圓算第 1 次
+        streak_count = 1 
         
-        # 從最近的歷史記錄往前推
         for past_wafer_defects in reversed(self.history_locations):
             match_found = False
             for past_loc in past_wafer_defects:
@@ -263,16 +263,13 @@ class FDC_System:
             if match_found:
                 streak_count += 1
             else:
-                break # 只要前一片沒有，連續性就中斷了
+                break 
                 
         return streak_count >= self.alarm_streak
 
     def decide_action(self, current_defects):
         current_locs = [(d['x'], d['y']) for d in current_defects]
 
-        # ==========================================================
-        # 規則 1 修正：收集所有致命瑕疵 (STOP)
-        # ==========================================================
         oversized_defects = []
         for defect in current_defects:
             if defect['length'] > self.size_threshold:
@@ -280,15 +277,11 @@ class FDC_System:
 
         if oversized_defects:
             defect_details = ", ".join(oversized_defects)
-            # 發生 STOP 時，也要將記錄寫入歷史，以免後續數據斷層
             self.history_locations.append(current_locs)
             if len(self.history_locations) > self.alarm_streak:
                 self.history_locations.pop(0)
             return "STOP", f"🚨 偵測到 {len(oversized_defects)} 個瑕疵超過停機標準！名單: {defect_details}"
 
-        # ==========================================================
-        # 規則 2: 系統性污染警報 (ALARM)
-        # ==========================================================
         action = "PASS"
         message = "機台狀況正常，繼續生產。"
 
@@ -296,16 +289,9 @@ class FDC_System:
             if self.is_same_location(loc):
                 action = "ALARM"
                 message = f"連續 {self.alarm_streak} 片晶圓在座標 {loc} 附近出現瑕疵，疑似機台污染！"
-                
-                # ==========================================================
-                # [關鍵修復] 觸發警報後，清空歷史記憶 (模擬機台已被工程師清潔保養)
-                # ==========================================================
                 self.history_locations.clear()
-                return action, message # 直接回傳，不再把當前資料寫入歷史
+                return action, message 
 
-        # ==========================================================
-        # 沒觸發警報，才把這片晶圓的座標寫入歷史記憶
-        # ==========================================================
         self.history_locations.append(current_locs)
         
         if len(self.history_locations) > self.alarm_streak:
@@ -318,10 +304,15 @@ class FDC_System:
 # 主程式執行區塊 (全資料夾批次掃描 + 終端機總結報表)
 # ==========================================================
 if __name__ == "__main__":
-    MODEL = r"C:\Users\user\CnLearning\AIChatGPT\Module_B_Vision\OpenCV\best.pt"
-    # ⚠️ 指定你的圖片資料夾與輸出資料夾
-    INPUT_DIR = r"C:\Users\user\CnLearning\AIChatGPT\Module_B_Vision\OpenCV\images" 
-    OUTPUT_DIR = r"C:\Users\user\CnLearning\AIChatGPT\Module_B_Vision\OpenCV\results"
+    # ==========================================================
+    # [修改重點] 自動取得目前檔案所在的資料夾路徑，不再寫死絕對路徑
+    # ==========================================================
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    
+    MODEL = os.path.join(BASE_DIR, "best.pt")
+    # ⚠️ 假設你的圖片都放在 Backend_AI 裡面的 images 資料夾
+    INPUT_DIR = os.path.join(BASE_DIR, "images") 
+    OUTPUT_DIR = os.path.join(BASE_DIR, "results")
     
     if os.path.exists(MODEL) and os.path.exists(INPUT_DIR):
         # 1. 初始化系統
@@ -331,8 +322,6 @@ if __name__ == "__main__":
             patch_shrink_max=7, patch_shrink_min=1, inclusion_fusion_assist=3, inclusion_global_merge=5
         )
         
-        # [測試 ALARM 專用設定] 將 size_threshold 調到極大 (9999.0)，避免被 STOP 攔截
-        # 測試完畢後，記得改回 50.0 恢復正常產線邏輯
         fdc = FDC_System(size_threshold=50, alarm_streak=3, loc_tolerance=20.0)
         
         # 2. 抓取資料夾內所有圖片並排序
@@ -345,7 +334,6 @@ if __name__ == "__main__":
         else:
             print(f"\n🚀 [系統啟動] 找到 {len(image_files)} 張圖片，開始進行產線自動化批次掃描...\n")
             
-            # 準備一個大清單，用來收集所有圖片的最終結果
             final_summary_report = []
             all_report_data_for_csv = []
             
@@ -357,7 +345,7 @@ if __name__ == "__main__":
                 results = inspector.inspect(current_img_path, OUTPUT_DIR)
                 
                 current_defects_for_fdc = [] 
-                defect_log_strings = [] # 用來記錄這張圖的所有瑕疵字串
+                defect_log_strings = [] 
                 
                 for r in results:
                     m = r['metrics']

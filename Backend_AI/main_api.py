@@ -3,7 +3,7 @@ import uvicorn
 import os
 import shutil
 
-# 1. 載入你剛剛寫好的核心引擎 (請確保你的檔案已經改名為 my_inspector.py)
+# 1. 載入你剛剛寫好的核心引擎 (請確保你的檔案已經改名為 my_inspector.py 或維持 main.py，需與你的檔名一致)
 from main import SemiGuardianInspectorV13_16, FDC_System
 
 # 2. 建立 FastAPI 應用程式實體
@@ -16,8 +16,12 @@ app = FastAPI(
 # =====================================================================
 # 系統初始化區塊 (伺服器啟動時只載入一次模型，這對產線的檢測速度至關重要)
 # =====================================================================
-MODEL_PATH = r"C:\Users\user\CnLearning\AIChatGPT\Module_B_Vision\OpenCV\best.pt"
-TEMP_DIR = r"C:\Users\user\CnLearning\AIChatGPT\Module_B_Vision\OpenCV\api_temp"
+# [修改重點] 自動取得目前 main_api.py 所在的資料夾路徑 (即 Backend_AI 資料夾)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 使用 os.path.join 動態組合相對路徑
+MODEL_PATH = os.path.join(BASE_DIR, "best.pt")
+TEMP_DIR = os.path.join(BASE_DIR, "api_temp")
 
 # 建立暫存資料夾用來存放機台透過網路傳來的圖片
 if not os.path.exists(TEMP_DIR):
