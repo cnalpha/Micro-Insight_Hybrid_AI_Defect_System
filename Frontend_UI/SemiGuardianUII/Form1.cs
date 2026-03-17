@@ -16,9 +16,11 @@ namespace SemiGuardianUII
         // =========================================================
         private readonly string apiUrl = "http://127.0.0.1:8000/inspect_wafer/";
 
-        // 🚨 [請修改這裡] 將下方的路徑替換成你目前 Backend_AI 裡面的 api_temp 絕對路徑
-        // 例如：@"C:\Users\user\Desktop\Micro-Insight-System\Backend_AI\api_temp"
+        // 🚨 維持你原本的絕對路徑設定
         private readonly string tempDir = @"C:\Users\user\CnLearning\Micro-Insight_Hybrid_AI_Defect_System\Backend_AI\api_temp";
+
+        // 🌟 [新增] 用來收集 CSV 報表資料的清單
+        private List<string> csvDataLines = new List<string>();
 
         // UI 元件
         private ListBox lstDefects;
@@ -249,6 +251,10 @@ namespace SemiGuardianUII
                     reviewHistory.Clear();
                     currentReviewIndex = -1;
 
+                    // 🌟 [新增] 初始化 CSV 暫存區，寫入標題列
+                    csvDataLines.Clear();
+                    csvDataLines.Add("Wafer_Image,Defect_ID,Class,Measurement,Area (um^2),Center_X (px),Center_Y (px)");
+
                     lstDefects.Items.Clear();
                     lstDefects.Items.Add($"🚀 系統啟動：批次載入 {imageFiles.Count} 片晶圓");
                     lstDefects.Items.Add(new string('=', 40));
@@ -277,6 +283,17 @@ namespace SemiGuardianUII
                     // 批次結束，關閉暫停按鈕並開啟回查功能
                     lblAction.Text = "✅ 批次檢測完成";
                     lblAction.ForeColor = Color.LimeGreen;
+
+                    // 🌟 [新增] 匯出 CSV 報表 (只要有資料就匯出)
+                    if (csvDataLines.Count > 1)
+                    {
+                        string csvFileName = $"Batch_Report_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                        string csvFilePath = Path.Combine(tempDir, csvFileName);
+                        // 使用 UTF8 (加上 BOM)，確保 Excel 打開時中文不會變成亂碼
+                        File.WriteAllLines(csvFilePath, csvDataLines, new System.Text.UTF8Encoding(true));
+                        lstDefects.Items.Add($"💾 CSV報表已匯出: {csvFileName}");
+                    }
+
                     lblMessage.Text = "系統說明: 掃描完畢，機台進入待機。可使用上方導覽按鈕回查紀錄。";
 
                     btnInspect.Enabled = true;
@@ -343,6 +360,17 @@ namespace SemiGuardianUII
                     if (defectsArray.Count == 0) lstDefects.Items.Add("   (無瑕疵)");
                     else foreach (var defect in defectsArray) lstDefects.Items.Add($"   {defect.ToString()}");
                     lstDefects.Items.Add(new string('-', 40));
+
+                    // 🌟 [新增] 解析給 CSV 用的原始數據，寫入暫存清單
+                    if (json["raw_defects"] is JArray rawDefectsArray)
+                    {
+                        foreach (var d in rawDefectsArray)
+                        {
+                            // 組合逗號分隔字串
+                            string line = $"{filename},{d["Defect_ID"]},{d["Class"]},\"{d["Measurement"]}\",{d["Area_um2"]},{d["Center_X"]},{d["Center_Y"]}";
+                            csvDataLines.Add(line);
+                        }
+                    }
 
                     string annotatedImgName = $"result_V13_16_Annotated_{filename}";
                     string annotatedImgPath = Path.Combine(tempDir, annotatedImgName);
