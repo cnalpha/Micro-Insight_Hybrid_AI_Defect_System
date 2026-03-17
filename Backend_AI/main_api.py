@@ -62,9 +62,12 @@ async def inspect_wafer(file: UploadFile = File(...)):
         # 整理 FDC 與 JSON 報表需要的數據格式
         current_defects_for_fdc = []
         defect_details = []
+        raw_defects = [] # 🌟 [新增] 用來儲存給 CSV 的原始數據
         
         for r in results:
             m = r['metrics']
+            cls = r['class'] # 🌟 [新增] 抓取瑕疵種類
+            
             current_defects_for_fdc.append({
                 'id': r['id'],
                 'length': m['display_value'],
@@ -73,6 +76,16 @@ async def inspect_wafer(file: UploadFile = File(...)):
             })
             val_str = f"{m['display_value']:.2f} {m['display_unit']}"
             defect_details.append(f"ID:{r['id']} ({val_str})")
+            
+            # 🌟 [新增] 將詳細數據打包成字典，準備傳給 C#
+            raw_defects.append({
+                'Defect_ID': r['id'],
+                'Class': cls,
+                'Measurement': val_str,
+                'Area_um2': round(m['area_um2'], 2),
+                'Center_X': m['center_x_px'],
+                'Center_Y': m['center_y_px']
+            })
 
         # 3. 呼叫 Module C 進行 FDC 邏輯判斷
         action, fdc_message = fdc.decide_action(current_defects_for_fdc)
@@ -84,6 +97,7 @@ async def inspect_wafer(file: UploadFile = File(...)):
             "filename": file.filename,
             "defect_count": len(results),
             "defects_list": defect_details,
+            "raw_defects": raw_defects,  # 🌟 [新增] 把這包原始資料傳給 C#
             "fdc_action": action,        # 關鍵指令: PASS, STOP, 或 ALARM
             "fdc_message": fdc_message   # 系統說明的字串
         }
